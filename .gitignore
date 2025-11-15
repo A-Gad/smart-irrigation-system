@@ -1,0 +1,39 @@
+# Build directories
+/build/
+/cmake-build-*/
+
+# Qt generated files
+*.moc
+*.qrc
+*.ui.*
+*.obj
+*.o
+*.so
+*.dll
+*.exe
+
+# Qt Creator / IDE specific
+*.user
+*.user.* 
+*.pro.user
+*.qbs.user
+*.creator.*
+
+# Backup / temp files
+*~
+*.swp
+*.tmp
+*.log
+
+# VS Code 
+.vscode/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+
+# Misc
+*.bak
+*.old
