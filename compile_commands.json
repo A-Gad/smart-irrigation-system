@@ -1,1 +1,20 @@
-build/compile_commands.json
+[
+{
+  "directory": "/home/gad/projects/smart-irrigation-system",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_WIDGETS_LIB -I/home/gad/projects/smart-irrigation-system/smart_irrigation_system_autogen/include -I/home/gad/projects/smart-irrigation-system/include -isystem /usr/include/x86_64-linux-gnu/qt6/QtCore -isystem /usr/include/x86_64-linux-gnu/qt6 -isystem /usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++ -isystem /usr/include/x86_64-linux-gnu/qt6/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt6/QtGui -std=gnu++17 -fPIC -o CMakeFiles/smart_irrigation_system.dir/smart_irrigation_system_autogen/mocs_compilation.cpp.o -c /home/gad/projects/smart-irrigation-system/smart_irrigation_system_autogen/mocs_compilation.cpp",
+  "file": "/home/gad/projects/smart-irrigation-system/smart_irrigation_system_autogen/mocs_compilation.cpp",
+  "output": "CMakeFiles/smart_irrigation_system.dir/smart_irrigation_system_autogen/mocs_compilation.cpp.o"
+},
+{
+  "directory": "/home/gad/projects/smart-irrigation-system",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_WIDGETS_LIB -I/home/gad/projects/smart-irrigation-system/smart_irrigation_system_autogen/include -I/home/gad/projects/smart-irrigation-system/include -isystem /usr/include/x86_64-linux-gnu/qt6/QtCore -isystem /usr/include/x86_64-linux-gnu/qt6 -isystem /usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++ -isystem /usr/include/x86_64-linux-gnu/qt6/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt6/QtGui -std=gnu++17 -fPIC -o CMakeFiles/smart_irrigation_system.dir/src/main.cpp.o -c /home/gad/projects/smart-irrigation-system/src/main.cpp",
+  "file": "/home/gad/projects/smart-irrigation-system/src/main.cpp",
+  "output": "CMakeFiles/smart_irrigation_system.dir/src/main.cpp.o"
+},
+{
+  "directory": "/home/gad/projects/smart-irrigation-system",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_WIDGETS_LIB -I/home/gad/projects/smart-irrigation-system/smart_irrigation_system_autogen/include -I/home/gad/projects/smart-irrigation-system/include -isystem /usr/include/x86_64-linux-gnu/qt6/QtCore -isystem /usr/include/x86_64-linux-gnu/qt6 -isystem /usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++ -isystem /usr/include/x86_64-linux-gnu/qt6/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt6/QtGui -std=gnu++17 -fPIC -o CMakeFiles/smart_irrigation_system.dir/src/core/app_controller.cpp.o -c /home/gad/projects/smart-irrigation-system/src/core/app_controller.cpp",
+  "file": "/home/gad/projects/smart-irrigation-system/src/core/app_controller.cpp",
+  "output": "CMakeFiles/smart_irrigation_system.dir/src/core/app_controller.cpp.o"
+}
+]
