@@ -33,6 +33,13 @@ void Simulator::startSimulation(int intervalMs)
         m_updateTimer->start();
 }
 
+void Simulator::stopSimulation()
+{
+    if (m_updateTimer->isActive()) {
+        m_updateTimer->stop();
+    }
+}
+
 void Simulator::setPumpRunning(bool running)
 {
     pumpRunning = running;

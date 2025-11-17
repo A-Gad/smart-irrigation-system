@@ -16,6 +16,7 @@ public:
     ~Simulator();
 
     void startSimulation(int intervalMs);
+    void stopSimulation();
     void setPumpRunning(bool running);
 
 signals:
