@@ -13,6 +13,7 @@ MainWindow::MainWindow(AppController *controller, QWidget *parent)
       moistureSeries(nullptr),
       axisX(nullptr),
       axisY(nullptr),
+      pumpOn(false),
       dataPointCounter(0)
 {
     setupUI();
@@ -27,9 +28,9 @@ MainWindow::MainWindow(AppController *controller, QWidget *parent)
             this, &MainWindow::updateLabels);
     connect(appController, &AppController::rainDetected,
             this, &MainWindow::onRainDetected);
-    
+     
     setWindowTitle("Smart Irrigation System");
-    resize(900, 700);
+    resize(1000, 700);
 }
 
 MainWindow::~MainWindow() 
@@ -38,34 +39,89 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupUI()
 {
+    // Create central widget with tab widget
     QWidget *centralWidget = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
     
-    // Info labels
-    QGroupBox *infoGroup = new QGroupBox("Sensor Readings", this);
+    // Create tab widget
+    tabWidget = new QTabWidget(this);
+    tabWidget->setTabPosition(QTabWidget::North);
+    
+    // Setup individual tabs
+    setupMonitoringTab();
+    setupControlsTab();
+    
+    mainLayout->addWidget(tabWidget);
+    setCentralWidget(centralWidget);
+}
+
+void MainWindow::setupMonitoringTab()
+{
+    // Create monitoring tab widget
+    QWidget *monitoringTab = new QWidget();
+    QVBoxLayout *monitoringLayout = new QVBoxLayout(monitoringTab);
+    
+    // Sensor readings group
+    QGroupBox *infoGroup = new QGroupBox("Current Sensor Readings", monitoringTab);
     QVBoxLayout *infoMainLayout = new QVBoxLayout(infoGroup);
     
     QHBoxLayout *infoLayout = new QHBoxLayout();
-    moistureLabel = new QLabel("Moisture: -- ", this);
-    tempLabel = new QLabel("Temperature: -- °C", this);
-    humidityLabel = new QLabel("Humidity: -- %", this);
+    moistureLabel = new QLabel("Moisture: -- ", monitoringTab);
+    tempLabel = new QLabel("Temperature: -- °C", monitoringTab);
+    humidityLabel = new QLabel("Humidity: -- %", monitoringTab);
+    
+    moistureLabel->setStyleSheet("QLabel { font-size: 14px; padding: 5px; }");
+    tempLabel->setStyleSheet("QLabel { font-size: 14px; padding: 5px; }");
+    humidityLabel->setStyleSheet("QLabel { font-size: 14px; padding: 5px; }");
     
     infoLayout->addWidget(moistureLabel);
     infoLayout->addWidget(tempLabel);
     infoLayout->addWidget(humidityLabel);
     
-    rainStatusLabel = new QLabel("Rain Status: No Rain", this);
-    rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; color: #666; }");
+    // Status indicators
+    QHBoxLayout *statusLayout = new QHBoxLayout();
+    
+    pumpStatusLabel = new QLabel("Pump: OFF", monitoringTab);
+    pumpStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #E74C3C; padding: 5px; }");
+    
+    rainStatusLabel = new QLabel("Rain Status: No Rain", monitoringTab);
+    rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #666; padding: 5px; }");
+    
+    statusLayout->addWidget(pumpStatusLabel);
+    statusLayout->addWidget(rainStatusLabel);
     
     infoMainLayout->addLayout(infoLayout);
-    infoMainLayout->addWidget(rainStatusLabel);
+    infoMainLayout->addLayout(statusLayout);
     
-    // Control buttons
-    QGroupBox *controlGroup = new QGroupBox("Simulation Controls", this);
+    monitoringLayout->addWidget(infoGroup);
+    
+    // Add to tab widget
+    tabWidget->addTab(monitoringTab, "📊 Monitoring");
+}
+
+void MainWindow::setupControlsTab()
+{
+    // Create controls tab widget
+    QWidget *controlsTab = new QWidget();
+    QVBoxLayout *controlsLayout = new QVBoxLayout(controlsTab);
+    
+    // Simulation controls group
+    QGroupBox *controlGroup = new QGroupBox("Simulation Controls", controlsTab);
     QHBoxLayout *buttonLayout = new QHBoxLayout(controlGroup);
     
-    startButton = new QPushButton("Start Simulation", this);
-    stopButton = new QPushButton("Stop Simulation", this);
+    startButton = new QPushButton("▶ Start Simulation", controlsTab);
+    stopButton = new QPushButton("⏸ Stop Simulation", controlsTab);
+    
+    startButton->setStyleSheet(
+        "QPushButton { background-color: #27AE60; color: white; "
+        "font-weight: bold; padding: 10px; font-size: 14px; }"
+        "QPushButton:hover { background-color: #229954; }"
+    );
+    stopButton->setStyleSheet(
+        "QPushButton { background-color: #E74C3C; color: white; "
+        "font-weight: bold; padding: 10px; font-size: 14px; }"
+        "QPushButton:hover { background-color: #C0392B; }"
+    );
     
     connect(startButton, &QPushButton::clicked, 
             appController, &AppController::startSimulation);
@@ -75,42 +131,122 @@ void MainWindow::setupUI()
     buttonLayout->addWidget(startButton);
     buttonLayout->addWidget(stopButton);
     
-    // Rain simulation controls
-    QGroupBox *rainGroup = new QGroupBox("Rain Simulation", this);
-    QHBoxLayout *rainLayout = new QHBoxLayout(rainGroup);
+    // Pump control group
+    QGroupBox *pumpControl = new QGroupBox("💧 Pump Control", controlsTab);
+    QVBoxLayout *pumpMainLayout = new QVBoxLayout(pumpControl);
+    
+    QLabel *pumpDescription = new QLabel(
+        "Control the irrigation pump to add water to the soil. "
+        "The pump efficiency depends on current soil saturation.",
+        controlsTab
+    );
+    pumpDescription->setWordWrap(true);
+    pumpDescription->setStyleSheet("QLabel { color: #555; margin-bottom: 10px; }");
+    
+    QHBoxLayout *pumpLayout = new QHBoxLayout();
+    
+    pumpOnButton = new QPushButton("🚿 Start Pump", controlsTab);
+    pumpOnButton->setStyleSheet(
+        "QPushButton { background-color: #27AE60; color: white; "
+        "font-weight: bold; padding: 10px; font-size: 14px; }"
+        "QPushButton:hover { background-color: #229954; }"
+        "QPushButton:disabled { background-color: #95A5A6; }"
+    );
+    
+    pumpOffButton = new QPushButton("⏹ Stop Pump", controlsTab);
+    pumpOffButton->setStyleSheet(
+        "QPushButton { background-color: #E74C3C; color: white; "
+        "font-weight: bold; padding: 10px; font-size: 14px; }"
+        "QPushButton:hover { background-color: #C0392B; }"
+        "QPushButton:disabled { background-color: #95A5A6; }"
+    );
+    pumpOffButton->setEnabled(false);
+    
+    connect(pumpOnButton, &QPushButton::clicked,
+            this, &MainWindow::onPumpStartClicked);
+    connect(pumpOffButton, &QPushButton::clicked,
+            this, &MainWindow::onPumpStopClicked);
+    
+    pumpLayout->addWidget(pumpOnButton);
+    pumpLayout->addWidget(pumpOffButton);
+    
+    pumpMainLayout->addWidget(pumpDescription);
+    pumpMainLayout->addLayout(pumpLayout);
+    
+    // Rain simulation group
+    QGroupBox *rainGroup = new QGroupBox("🌧️ Rain Simulation", controlsTab);
+    QVBoxLayout *rainMainLayout = new QVBoxLayout(rainGroup);
+    
+    QLabel *rainDescription = new QLabel(
+        "Simulate rain events with custom duration and intensity. "
+        "Rain intensity: 5-10 mm/h (light), 10-20 mm/h (moderate), 20+ mm/h (heavy).",
+        controlsTab
+    );
+    rainDescription->setWordWrap(true);
+    rainDescription->setStyleSheet("QLabel { color: #555; margin-bottom: 10px; }");
+    
+    QHBoxLayout *rainLayout = new QHBoxLayout();
     
     QFormLayout *rainParamsLayout = new QFormLayout();
     
-    rainDurationSpinBox = new QSpinBox(this);
-    rainDurationSpinBox->setRange(1, 3600); // 1 second to 1 hour
-    rainDurationSpinBox->setValue(60); // Default 60 seconds
+    rainDurationSpinBox = new QSpinBox(controlsTab);
+    rainDurationSpinBox->setRange(1, 3600);
+    rainDurationSpinBox->setValue(60);
     rainDurationSpinBox->setSuffix(" sec");
     rainDurationSpinBox->setToolTip("Duration of rain in seconds");
+    rainDurationSpinBox->setMinimumWidth(150);
     
-    rainIntensitySpinBox = new QDoubleSpinBox(this);
-    rainIntensitySpinBox->setRange(1.0, 50.0); // Light to heavy rain
-    rainIntensitySpinBox->setValue(15.0); // Default moderate rain
+    rainIntensitySpinBox = new QDoubleSpinBox(controlsTab);
+    rainIntensitySpinBox->setRange(1.0, 50.0);
+    rainIntensitySpinBox->setValue(15.0);
     rainIntensitySpinBox->setSuffix(" mm/h");
     rainIntensitySpinBox->setDecimals(1);
     rainIntensitySpinBox->setSingleStep(1.0);
-    rainIntensitySpinBox->setToolTip("Rain intensity (5-10: light, 10-20: moderate, 20+: heavy)");
+    rainIntensitySpinBox->setToolTip("Rain intensity");
+    rainIntensitySpinBox->setMinimumWidth(150);
     
     rainParamsLayout->addRow("Duration:", rainDurationSpinBox);
     rainParamsLayout->addRow("Intensity:", rainIntensitySpinBox);
     
-    rainButton = new QPushButton("Simulate Rain", this);
-    rainButton->setStyleSheet("QPushButton { background-color: #4A90E2; color: white; font-weight: bold; padding: 8px; }");
+    rainButton = new QPushButton("🌧️ Simulate Rain", controlsTab);
+    rainButton->setStyleSheet(
+        "QPushButton { background-color: #3498DB; color: white; "
+        "font-weight: bold; padding: 10px; font-size: 14px; }"
+        "QPushButton:hover { background-color: #2980B9; }"
+    );
     connect(rainButton, &QPushButton::clicked,
             this, &MainWindow::onSimulateRainClicked);
     
     rainLayout->addLayout(rainParamsLayout);
     rainLayout->addWidget(rainButton);
     
-    mainLayout->addWidget(infoGroup);
-    mainLayout->addWidget(controlGroup);
-    mainLayout->addWidget(rainGroup);
+    rainMainLayout->addWidget(rainDescription);
+    rainMainLayout->addLayout(rainLayout);
     
-    setCentralWidget(centralWidget);
+    // Add all groups to controls layout
+    controlsLayout->addWidget(controlGroup);
+    controlsLayout->addWidget(pumpControl);
+    controlsLayout->addWidget(rainGroup);
+    controlsLayout->addStretch();  // Push everything to top
+    
+    // Add to tab widget
+    tabWidget->addTab(controlsTab, "⚙️ Controls");
+}
+void MainWindow::setupSettingsTab()
+{
+    QWidget* settingsTab = new QWidget(this);
+    QVBoxLayout *monitoringLayout = new QVBoxLayout(settingsTab);
+
+    tabWidget->addTab(settingsTab, "Settings");
+
+}
+
+void MainWindow::setupHistoryTab()
+{
+    QWidget* hsitoryTab = new QWidget(this);
+    QVBoxLayout *monitoringLayout = new QVBoxLayout(hsitoryTab);
+    
+    tabWidget->addTab(hsitoryTab, "History");
 }
 
 void MainWindow::setupChart()
@@ -140,11 +276,12 @@ void MainWindow::setupChart()
     moistureSeries->attachAxis(axisY);
     
     // Create chart view
-    chartView = new QChartView(chart, this);
+    chartView = new QChartView(chart);
     chartView->setRenderHint(QPainter::Antialiasing);
     
-    // Add to layout
-    QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(centralWidget()->layout());
+    // Add chart to monitoring tab
+    QWidget *monitoringTab = tabWidget->widget(0);  // Get first tab
+    QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(monitoringTab->layout());
     if (layout) {
         layout->addWidget(chartView);
     }
@@ -168,18 +305,18 @@ void MainWindow::updateMoistureChart(double value)
 
 void MainWindow::updateLabels()
 {
-    moistureLabel->setText(QString("Moisture: %1")
+    moistureLabel->setText(QString("💧 Moisture: %1")
                           .arg(appController->getCurrentMoisture(), 0, 'f', 1));
-    tempLabel->setText(QString("Temperature: %1 °C")
+    tempLabel->setText(QString("🌡️ Temperature: %1 °C")
                       .arg(appController->getCurrentTemp(), 0, 'f', 1));
-    humidityLabel->setText(QString("Humidity: %1 %")
+    humidityLabel->setText(QString("💨 Humidity: %1 %")
                           .arg(appController->getCurrentHumidity(), 0, 'f', 1));
 }
 
 void MainWindow::onRainDetected()
 {
     rainStatusLabel->setText("Rain Status: 🌧️ RAINING");
-    rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; color: #2E86DE; }");
+    rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #3498DB; padding: 5px; }");
 }
 
 void MainWindow::onSimulateRainClicked()
@@ -187,20 +324,47 @@ void MainWindow::onSimulateRainClicked()
     int duration = rainDurationSpinBox->value();
     double intensity = rainIntensitySpinBox->value();
     
-    // Call the simulator's deduceRain method through the controller
     if (appController && appController->getSimulator()) {
         appController->getSimulator()->deduceRain(duration, intensity);
         
-        // Update UI to show rain started
         rainStatusLabel->setText(QString("Rain Status: 🌧️ RAINING (%1s, %2 mm/h)")
                                 .arg(duration)
                                 .arg(intensity, 0, 'f', 1));
-        rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; color: #2E86DE; }");
+        rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #3498DB; padding: 5px; }");
         
-        // Reset status after rain duration (for visual feedback)
         QTimer::singleShot(duration * 1000, this, [this]() {
             rainStatusLabel->setText("Rain Status: No Rain");
-            rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; color: #666; }");
+            rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #666; padding: 5px; }");
         });
+    }
+}
+
+void MainWindow::onPumpStartClicked()
+{
+    pumpOn = true;
+    
+    pumpStatusLabel->setText("Pump: 🚿 ON");
+    pumpStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #27AE60; padding: 5px; }");
+    
+    pumpOnButton->setEnabled(false);
+    pumpOffButton->setEnabled(true);
+    
+    if (appController && appController->getSimulator()) {
+        appController->getSimulator()->setPumpRunning(true);
+    }
+}
+
+void MainWindow::onPumpStopClicked()
+{
+    pumpOn = false;
+    
+    pumpStatusLabel->setText("Pump: OFF");
+    pumpStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #E74C3C; padding: 5px; }");
+    
+    pumpOnButton->setEnabled(true);
+    pumpOffButton->setEnabled(false);
+    
+    if (appController && appController->getSimulator()) {
+        appController->getSimulator()->setPumpRunning(false);
     }
 }

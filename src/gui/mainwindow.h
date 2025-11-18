@@ -12,6 +12,7 @@
 #include <QPushButton>
 #include <QSpinBox>
 #include <QDoubleSpinBox>
+#include <QTabWidget>
 
 class AppController;
 
@@ -28,13 +29,23 @@ private slots:
     void updateLabels();
     void onRainDetected();
     void onSimulateRainClicked();
+    void onPumpStartClicked();
+    void onPumpStopClicked();
 
 private:
     void setupUI();
+    void setupMonitoringTab();
+    void setupControlsTab();
+    void setupSettingsTab();
+    void setupHistoryTab();
     void setupChart();
 
     AppController *appController;
     
+    // Tab widget
+    QTabWidget *tabWidget;
+    
+    // Monitoring tab widgets
     QChartView *chartView;
     QChart *chart;
     QLineSeries *moistureSeries;
@@ -45,13 +56,19 @@ private:
     QLabel *tempLabel;
     QLabel *humidityLabel;
     QLabel *rainStatusLabel;
+    QLabel *pumpStatusLabel;
     
+    // Controls tab widgets
     QPushButton *startButton;
     QPushButton *stopButton;
     QPushButton *rainButton;
+    QPushButton *pumpOnButton;
+    QPushButton *pumpOffButton;
     
     QSpinBox *rainDurationSpinBox;
     QDoubleSpinBox *rainIntensitySpinBox;
+    
+    bool pumpOn;
     
     int dataPointCounter;
     const int maxDataPoints = 100;
