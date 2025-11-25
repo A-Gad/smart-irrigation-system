@@ -13,10 +13,12 @@ struct sensorReading{
 
 class IrrigarionLogic
 {
+    private:
+        std::deque<sensorReading> sensorReadings;
     public:
-        static bool isReadingValid();//checks validity of sensor reading
-        static double getFilteredMoisture(const std::deque<double>& readings);//gets average last 5 readings
-        static double getMoistuerChangeRate(const std::deque<double>& readings);//gets changerate of moisture
+        static bool isReadingValid(double moisture);//checks validity of sensor reading
+        static double getFilteredMoisture(const std::deque<sensorReading>& readings);//gets average last 5 readings
+        static std::optional<double>getMoistuerChangeRate(const std::deque<sensorReading>& readings);//gets changerate of moisture
         //decisions
         static bool shouldStartWatering(double filteredMoisture,
         double threshold,
@@ -24,11 +26,11 @@ class IrrigarionLogic
         std::chrono::minutes timeSinceLastWatering,
         int minIntervalMinutes);
 
-        static bool shouldStopWatering(double filteredMoisture,
-        double threshold,
-        int consecutiveLowReadings,
-        std::chrono::minutes timeSinceLastWatering,
-        int minIntervalMinutes,
+        static bool shouldStopWatering(
+        double filteredMoisture,
+        double targetMoisture,
+        std::chrono::seconds wateringDuration,
+        int maxWateringSeconds,
         std::optional<double> moistureChangeRate);
 
         static bool shouldResumeMonitoring(

@@ -3,6 +3,7 @@
 
 #include "i_sensor_interface.hpp"
 #include "i_pump_interface.hpp"
+#include "irrigation_logic.hpp"
 #include <map>
 #include <chrono>
 #include <mutex>
@@ -112,9 +113,17 @@ class StateMachine
         
         mutable std::mutex configMutex;
         IrrigationConfig config;
+        
         ISensorInterface* sensor;
         IPumpInterface* pump;
        
+        std::deque<sensorReading> recentReadings; //
+
+        // Error tracking
+        int consecutiveReadFailures;
+        int consecutiveLowReadings;
+        bool pumpIsRunning;
+
         //time stamps
         std::chrono::steady_clock::time_point stateEntryTime;
         std::chrono::steady_clock::time_point pumpStartTime;
