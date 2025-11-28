@@ -1,5 +1,6 @@
 #include "state_machine.hpp"
 #include "logger.hpp"
+#include "irrigation_logic.hpp"
 
 std::string StateMachine::stateToString(SystemState state)
 {
@@ -165,112 +166,339 @@ void StateMachine::update()
     publishedState = currentState;
 }
 
+sensorReading StateMachine::createReading(double moisture) {
+    return sensorReading{
+        moisture,
+        std::chrono::steady_clock::now(),
+        IrrigarionLogic::isReadingValid(moisture)
+    };
+}
+
+void StateMachine::addSensorReading(double moisture)
+{
+    std::lock_guard<std::mutex> lock(readingsMutex);
+
+    recentReadings.push_back(createReading(moisture));
+
+    if(recentReadings.size() > 10)
+    recentReadings.pop_front();
+}
+
 SystemState StateMachine::IdleState()
 {
-    // ---------------------
-    //  Read sensors (optional)
-    //  Example: double moisture = sensor->readMoisture();
-    // ---------------------
+    // Perform system health checks
     double moisture = sensor->getMoisture();
-
-    // ---------------------
-    //  Your logic here
-    //  - do nothing?
-    //  - wait for command?
-    // ---------------------
+    double temp = sensor->getTemp();
+    double humid = sensor->getHumid();
+    bool isRaining = sensor->isRainDetected();
+    bool isHealthy = sensor->isHealthy();
     
-
-    // Return next state (or same state)
+    //Validate all sensor readings
+    if (!isHealthy) {
+        consecutiveReadFailures++;
+        spdlog::error("Sensor health check failed in IDLE state (failures: {})", 
+                      consecutiveReadFailures);
+        
+        if (consecutiveReadFailures >= 3) {
+            spdlog::error("Multiple sensor failures - entering ERROR state");
+            return SystemState::ERROR;
+        }
+    } else {
+        consecutiveReadFailures = 0;  // Reset on successful health check
+    }
+    
+    //Store sensor reading for baseline data
+    addSensorReading(moisture);
+    
+    // Log system status periodically (every 5 minutes)
+    auto idleDuration = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::steady_clock::now() - stateEntryTime
+    );
+    
+    if (idleDuration.count() % 300 == 0 && idleDuration.count() > 0) {
+        spdlog::info("IDLE status check - Moisture: {}%, Temp: {}°C, Humidity: {}%, Rain: {}", 
+                     moisture, temp, humid, isRaining ? "YES" : "NO");
+    }
+    
+    //Ensure pump is off in IDLE
+    if (pump->isActive()) {
+        spdlog::warn("Pump was running in IDLE state - stopping for safety");
+        pump->deactivate();
+    }
+    
+    // Check environmental conditions
+    if (isRaining) {
+        spdlog::debug("Rain detected - remaining in IDLE");
+    }
+    
+    // Auto-transition to MONITORING after stability period
+    // This allows the system to self-start after initialization
+    auto currentConfig = getConfig();
+    if (idleDuration.count() >= 30) {
+        // 30 seconds of stable IDLE before auto-starting
+        if (isHealthy && !isRaining) {
+            spdlog::info("Auto-starting monitoring after stable IDLE period");
+            return SystemState::MONITORING;
+        }
+    }
+    
     return SystemState::IDLE;
 }
 SystemState StateMachine::MonitoringState()
 {
-    // ---------------------
-    // Read sensor(s)
-    // ---------------------
-    // double moisture = sensor->readMoisture();
+    //add sensor reading
+    double moisture = sensor->getMoisture();
+    addSensorReading(moisture);
+    //get filtered moisture from irrigation logic
+    double filterdMoisture;
+    {
+        std::lock_guard<std::mutex> lock(readingsMutex);
+        filterdMoisture = IrrigarionLogic::getFilteredMoisture(recentReadings);
+    }
+    //check for invalid reading
+    if(!IrrigarionLogic::isReadingValid(moisture))
+    {
+        consecutiveReadFailures++;
+        spdlog::warn("Invalid sensor reading {} ",moisture);
 
+        if (consecutiveReadFailures >= 3)
+        {
+            spdlog::error("Multiple sensor failures detected");
+            return SystemState::ERROR;
+        }
+        return SystemState::MONITORING;
+    }
+    consecutiveReadFailures = 0;
 
-    // ---------------------
-    // Add your logic
-    // - check moisture threshold
-    // - check for sensor faults
-    // - check timing conditions
-    // ---------------------
+    //check for low moisture
+    auto currentConfig = getConfig();
 
+    if (filterdMoisture < currentConfig.lowMoistureThreshold)
+    {
+        consecutiveLowReadings++;
+        spdlog::info("low moisture reading {} (threshold is {})", filterdMoisture, currentConfig.lowMoistureThreshold);
+    }
+    else{
+        consecutiveLowReadings = 0; //reset 
+    }
 
-    // Example (keep or remove)
-    // if (moisture < lowMoistureThreshold)
-    //     return SystemState::WATERING;
+    //check logic to decide if watering is needed
+    auto timeSinceLastWatering = std::chrono::duration_cast<std::chrono::minutes>(
+        std::chrono::steady_clock::now() - lastWateringTime
+    );
+
+    bool shouldWater = IrrigarionLogic::shouldStartWatering(
+        filterdMoisture,
+        currentConfig.lowMoistureThreshold,
+        consecutiveLowReadings,
+        timeSinceLastWatering,
+        currentConfig.minWateringIntervalMinutes
+    );
+
+    if (shouldWater) {
+        spdlog::info("Starting watering cycle - Moisture: {}%",filterdMoisture);
+        wateringStartTime = std::chrono::steady_clock::now();
+        return SystemState::WATERING;
+    }
 
     return SystemState::MONITORING;
 }
 SystemState StateMachine::WateringState()
 {
-    // ---------------------
-    // Run pump logic
-    // ---------------------
-    // pump->start();
-    // double moisture = sensor->readMoisture();
-
-
-    // ---------------------
-    // Your logic here
-    // - check if moisture reached high threshold
-    // - check if max watering time exceeded
-    // - check for pump failure
-    // ---------------------
-
+    //check if its raining
+    if(sensor->isRainDetected())
+    {
+        spdlog::info("Rain Detected, pump will stop");
+        pump->deactivate();
+    }
+    //start pump
+    if (!pump->isActive())
+    {
+        pump->activate();
+        spdlog::info("pump started");
+    }
     
+    //get moisture 
+    double moisture = sensor->getMoisture();
+    addSensorReading(moisture);
+    //get filtered readings
+    double filteredMoisture;
+    std::optional<double> changeRate;
+    {
+        std::lock_guard<std::mutex> lock(readingsMutex);
+        filteredMoisture = IrrigarionLogic::getFilteredMoisture(recentReadings);
+        changeRate = IrrigarionLogic::getMoistuerChangeRate(recentReadings);
+    }
+    //calculate watering duration
+    auto wateringDuration = std::chrono::duration_cast<std::chrono::seconds> (
+        std::chrono::steady_clock::now() - wateringStartTime
+    );
+    auto currentConfig = getConfig();
+    //check if we should stop watering 
+    bool shouldStop = IrrigarionLogic::shouldStopWatering(
+        filteredMoisture,
+        currentConfig.highMoistureThreshold,
+        wateringDuration,
+        currentConfig.maxWateringSeconds,
+        changeRate
+    );
+
+    if(shouldStop)
+    {
+        pump->deactivate();
+        lastWateringTime = std::chrono::steady_clock::now();
+        if (filteredMoisture >= currentConfig.highMoistureThreshold)
+        {
+            spdlog::info("Target moisture reached: {}%", filteredMoisture);
+            return SystemState::WAITING;
+        }
+        else if (wateringDuration.count() >= currentConfig.maxWateringSeconds) {
+            spdlog::warn("Max watering time exceeded");
+            return SystemState::ERROR;
+        }
+        else if (changeRate.has_value() && changeRate.value() < 0.5) {
+            spdlog::error("Moisture not increasing - possible pump failure");
+            return SystemState::ERROR;
+        }
+    return SystemState::WAITING;
+    }
+    if (wateringDuration.count() % 30 == 0) {  // Every 30 seconds
+        spdlog::info("Watering progress: {}% (target: {}%, duration: {}s)",
+                     filteredMoisture, 
+                     currentConfig.highMoistureThreshold,
+                     wateringDuration.count());
+    }
     return SystemState::WATERING;
 }
+
 SystemState StateMachine::WaitingState()
 {
-    // ---------------------
-    // Check elapsed time
-    // ---------------------
-    // auto now = std::chrono::steady_clock::now();
-    // auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - stateEntryTime).count();
+    //calculate waite time
+    auto waitDuration = std::chrono::duration_cast<std::chrono::minutes>(
+        std::chrono::steady_clock::now() - stateEntryTime
+    );
 
-
-    // ---------------------
-    // Your logic here
-    // - wait N minutes
-    // - then go back to MONITORING
-    // ---------------------
-
-
+    //check if wait period is complete 
+    auto currentConfig = getConfig();
+    bool shouldResume = IrrigarionLogic::shouldResumeMonitoring(
+        waitDuration,
+        currentConfig.waitMinutes
+    );
+    if (shouldResume)
+    {
+        spdlog::info("wait period complete, resumming ");
+        consecutiveLowReadings = 0;
+        return SystemState::MONITORING;
+    }
+    // Log wait progress periodically
+    if (waitDuration.count() % 5 == 0)// Every 5 minutes
+    {
+        spdlog::debug("waiting: {} /{} Minutes",
+            waitDuration.count(),
+            currentConfig.waitMinutes
+        );
+    }
     return SystemState::WAITING;
 }
 SystemState StateMachine::ErrorState()
 {
-    // ---------------------
-    // Cleanup
-    // ---------------------
-    // pump->stop();
-
-
-    // ---------------------
-    // Your logic
-    // - wait until user resets system
-    // - check if hardware recovered
-    // ---------------------
-
-
+    //stop pump
+    if(pump->isActive())
+    {
+        pump->deactivate();
+        spdlog::error("Emergency pump shutdown, an error occured");
+    }
+    //calculate Error duration
+    auto errorDuration = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::steady_clock::now() - stateEntryTime
+    );
+    //check if we can recover
+    double moisture = sensor->getMoisture();
+    bool lastReadingValid = IrrigarionLogic::isReadingValid(moisture);
+    
+    auto currentConfig = getConfig();
+    int recoveryIntervalSeconds = 300;  // 5 minutes 
+    
+    bool canRecover = IrrigarionLogic::canRecoverFromError(
+        consecutiveReadFailures,
+        errorDuration,
+        recoveryIntervalSeconds,
+        lastReadingValid
+    );
+    
+    if (canRecover) {
+        spdlog::info("System recovered from error, resuming monitoring");
+        consecutiveReadFailures = 0;
+        consecutiveLowReadings = 0;
+        return SystemState::MONITORING;
+    }
+    
+    // Log error status periodically
+    if (errorDuration.count() % 60 == 0) {  // Every minute
+        spdlog::error("System in ERROR state: failures={}, duration={}s, sensor_valid={}",
+                      consecutiveReadFailures,
+                      errorDuration.count(),
+                      lastReadingValid);
+    }
+    
     return SystemState::ERROR;
 }
 SystemState StateMachine::ManualOverride()
 {
-    // ---------------------
-    // Manual control logic
-    // ---------------------
-    // - read user inputs
-    // - turn pump on/off based on manual commands
-    // - ignore automatic state transitions
-    // ---------------------
-
-
-    // Must always return MANUAL  
-    // (Auto transitions disabled in update())
+    //Read current sensor state for monitoring
+    double moisture = sensor->getMoisture();
+    double temp = sensor->getTemp();
+    bool isHealthy = sensor->isHealthy();
+    
+    //Safety check - monitor sensor health 
+    if (!isHealthy) {
+        spdlog::error("Sensor failure detected in MANUAL mode");
+        
+        // Safety: Stop pump if sensors fail
+        if (pump->isActive()) {
+            pump->deactivate();
+            spdlog::warn("Pump stopped due to sensor failure in MANUAL mode");
+        }
+    }
+    
+    //Store readings for continuity when returning to AUTO
+    addSensorReading(moisture);
+    
+    //Log manual operation status periodically
+    auto manualDuration = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::steady_clock::now() - stateEntryTime
+    );
+    
+    if (manualDuration.count() % 60 == 0 && manualDuration.count() > 0) {
+        spdlog::info("MANUAL mode active for {}s - Pump: {}, Moisture: {}%",
+                     manualDuration.count(),
+                     pump->isActive() ? "ON" : "OFF",
+                     moisture);
+    }
+    
+    // Safety timeout - prevent indefinite manual watering
+    auto currentConfig = getConfig();
+    int manualTimeoutSeconds = 3600;  //(1 hour)
+    
+    if (pump->isActive() && manualDuration.count() >= manualTimeoutSeconds) {
+        spdlog::warn("Manual watering timeout exceeded ({}s) - stopping pump for safety",
+                     manualTimeoutSeconds);
+        pump->deactivate();
+    }
+    
+    //Emergency moisture limit - prevent over-watering
+    if (pump->isActive() && moisture >= 95.0) {
+        spdlog::error("Critical moisture level reached ({}%) - emergency pump stop",
+                      moisture);
+        pump->deactivate();
+    }
+    
+    //Check for excessive manual duration without pump activity
+    if (!pump->isActive() && manualDuration.count() >= (manualTimeoutSeconds * 2)) {
+        spdlog::info("Extended MANUAL mode with no activity , returning to AUTO");
+        return SystemState::MONITORING;
+    }
+    // Must always return MANUAL
+    // (Automatic transitions are disabled - only commands can exit)
     return SystemState::MANUAL;
 }

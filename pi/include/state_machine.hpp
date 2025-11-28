@@ -117,7 +117,8 @@ class StateMachine
         ISensorInterface* sensor;
         IPumpInterface* pump;
        
-        std::deque<sensorReading> recentReadings; //
+        std::deque<sensorReading> recentReadings;
+        mutable std::mutex readingsMutex;
 
         // Error tracking
         int consecutiveReadFailures;
@@ -131,6 +132,9 @@ class StateMachine
 
         SystemState currentState = SystemState::IDLE; //current System State IDLE as default
         std::atomic<SystemState> publishedState; //atomic for safe reads from other threads
+
+        std::chrono::steady_clock::time_point lastWateringTime;
+        std::chrono::steady_clock::time_point wateringStartTime;
 
         PendingAction pendingAction = PendingAction::NONE;
 
@@ -150,6 +154,9 @@ class StateMachine
 
         //command processing 
         void processCommand(Command cmd);
+
+        void addSensorReading(double moisture);
+        sensorReading createReading(double moisture);
 };
 
 #endif
