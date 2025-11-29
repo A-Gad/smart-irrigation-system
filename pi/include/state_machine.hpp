@@ -105,17 +105,17 @@ class StateMachine
         std::string commandToString(Command cmd);
         IrrigationConfig getConfig()const; 
         void updateConfig(const IrrigationConfig& newconfig);
-
+        SystemState getCurrentState();
     private:
 
         std::mutex commandMutex;
         std::queue<Command> commands;
         
         mutable std::mutex configMutex;
-        IrrigationConfig config;
         
-        ISensorInterface* sensor;
-        IPumpInterface* pump;
+        ISensorInterface* sensor;       
+        IPumpInterface* pump;             
+        IrrigationConfig config;
        
         std::deque<sensorReading> recentReadings;
         mutable std::mutex readingsMutex;

@@ -1,0 +1,5 @@
+if(EXISTS "/home/gad/projects/smart-irrigation-system/pi/build/irrigation_tests[1]_tests.cmake")
+  include("/home/gad/projects/smart-irrigation-system/pi/build/irrigation_tests[1]_tests.cmake")
+else()
+  add_test(irrigation_tests_NOT_BUILT irrigation_tests_NOT_BUILT)
+endif()

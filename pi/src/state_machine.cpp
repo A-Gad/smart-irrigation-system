@@ -83,6 +83,10 @@ void StateMachine::processCommand(Command cmd)
             break;
     }
 }
+SystemState StateMachine::getCurrentState()
+{
+    return this->currentState;
+}
 IrrigationConfig StateMachine::getConfig() const
 {
     std::lock_guard<std::mutex> lock(configMutex);
@@ -193,6 +197,8 @@ SystemState StateMachine::IdleState()
     bool isRaining = sensor->isRainDetected();
     bool isHealthy = sensor->isHealthy();
     
+    (void)temp;    // Will use for temperature-based decisions later
+    (void)humid;
     //Validate all sensor readings
     if (!isHealthy) {
         consecutiveReadFailures++;
@@ -450,6 +456,8 @@ SystemState StateMachine::ManualOverride()
     double temp = sensor->getTemp();
     bool isHealthy = sensor->isHealthy();
     
+    (void)temp;   
+   
     //Safety check - monitor sensor health 
     if (!isHealthy) {
         spdlog::error("Sensor failure detected in MANUAL mode");

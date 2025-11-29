@@ -19,7 +19,7 @@ double IrrigarionLogic::getFilteredMoisture(const std::deque<sensorReading>& rea
         sum += it->moisturePercent;
         count ++;
     }
-    return(((count > 5)? (count/sum) : readings.back().moisturePercent));
+    return(((count > 5)? (sum/count) : readings.back().moisturePercent));
 }
 
 std::optional<double> IrrigarionLogic::getMoistuerChangeRate(const std::deque<sensorReading>& readings)

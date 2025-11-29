@@ -1,6 +1,6 @@
 #ifndef IRRIGATION_LOGIC_HPP
 #define IRRIGATION_LOGIC_HPP
-
+#include <string>
 #include <chrono>
 #include <optional>
 #include <deque>

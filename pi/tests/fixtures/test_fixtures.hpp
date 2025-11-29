@@ -6,7 +6,7 @@
 #include <gmock/gmock.h>
 #include "mock_interfaces.hpp"
 #include "state_machine.hpp"
-
+#include <thread>
 // Base fixture for state machine tests
 class StateMachineTestFixture : public ::testing::Test {
 protected:
