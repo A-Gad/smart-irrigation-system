@@ -7,19 +7,15 @@ bool IrrigarionLogic::isReadingValid(double moisture)
 
 double IrrigarionLogic::getFilteredMoisture(const std::deque<sensorReading>& readings)
 {
-    double sum = 0;
-    int count = 0;
+     if (readings.empty()) return 0.0;
 
-    if (readings.empty())
-    {
-        return 0.0;
-    }
-    for (auto it = readings.begin(); it != readings.end() && count < 5; ++it)
-    {
-        sum += it->moisturePercent;
-        count ++;
-    }
-    return(((count > 5)? (sum/count) : readings.back().moisturePercent));
+    size_t count = std::min<size_t>(5, readings.size());
+    double sum = 0.0;
+
+    for (size_t i = readings.size() - count; i < readings.size(); i++)
+        sum += readings[i].moisturePercent;
+
+    return sum / count;
 }
 
 std::optional<double> IrrigarionLogic::getMoistuerChangeRate(const std::deque<sensorReading>& readings)

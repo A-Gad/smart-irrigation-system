@@ -38,7 +38,8 @@ protected:
         ON_CALL(mockSensor, isRainDetected()).WillByDefault(Return(false));
         
         // Pump off by default
-        ON_CALL(mockPump, isActive()).WillByDefault(Return(false));
+        ON_CALL(mockPump, isActive()).WillByDefault(Return(false));  
+        ON_CALL(mockPump, initialize()).WillByDefault(Return(true));
     }
     
     // Helper method to create state machine

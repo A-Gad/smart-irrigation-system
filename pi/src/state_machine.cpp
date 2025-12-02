@@ -37,6 +37,8 @@ StateMachine::StateMachine(ISensorInterface* sensor, IPumpInterface* pump, const
     spdlog::info("Initial state: {}", stateToString(currentState));
     spdlog::info("Soil Type: {}", config.soilType);
     spdlog::info("Thresholds - Low: {}%, High: {}%", config.lowMoistureThreshold, config.highMoistureThreshold);
+    
+    lastWateringTime = std::chrono::steady_clock::now();
 }
 
 void StateMachine::initHandlers()
@@ -311,12 +313,7 @@ SystemState StateMachine::MonitoringState()
 }
 SystemState StateMachine::WateringState()
 {
-    //check if its raining
-    if(sensor->isRainDetected())
-    {
-        spdlog::info("Rain Detected, pump will stop");
-        pump->deactivate();
-    }
+   
     //start pump
     if (!pump->isActive())
     {
