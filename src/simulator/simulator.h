@@ -27,6 +27,10 @@ signals:
 
 public slots:
     void deduceRain(int durationSeconds, double intensity);
+    // double onSoilMoistureUpdated() const;
+    // bool onIsRainDetected() const;
+    // double onHumidityUpdated() const;
+    // double onTemperatureUpdated() const;
 
 private slots:
     void updateSensors();

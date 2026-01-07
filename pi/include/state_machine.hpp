@@ -121,9 +121,9 @@ class StateMachine
         mutable std::mutex readingsMutex;
 
         // Error tracking
-        int consecutiveReadFailures;
-        int consecutiveLowReadings;
-        bool pumpIsRunning;
+        int consecutiveReadFailures = 0;
+        int consecutiveLowReadings = 0;
+        bool pumpIsRunning = false;
 
         //time stamps
         std::chrono::steady_clock::time_point stateEntryTime;
