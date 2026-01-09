@@ -7,7 +7,7 @@ bool IrrigarionLogic::isReadingValid(double moisture)
 
 double IrrigarionLogic::getFilteredMoisture(const std::deque<sensorReading>& readings)
 {
-     if (readings.empty()) return 0.0;
+    if (readings.empty()) return 0.0;
 
     size_t count = std::min<size_t>(5, readings.size());
     double sum = 0.0;

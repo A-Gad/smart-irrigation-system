@@ -48,6 +48,7 @@ include(GoogleTest)
 add_library(irrigation_lib
     src/state_machine.cpp
     src/irrigation_logic.cpp
+    src/mqtt_handler.cpp
 )
 
 target_include_directories(irrigation_lib 
@@ -58,6 +59,7 @@ target_include_directories(irrigation_lib
 target_link_libraries(irrigation_lib 
     PUBLIC 
         spdlog::spdlog
+        paho-mqtt3a # Link against Paho MQTT Async C library
 )
 
 # Enable warnings
