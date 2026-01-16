@@ -24,7 +24,8 @@ qt_add_executable(smart_irrigation_system
     include/app_controller.h
     src/gui/mainwindow.h
     src/gui/mainwindow.cpp
-    src/simulator/simulator.cpp
+    src/core/mqtt_client_qt.cpp
+    src/core/mqtt_client_qt.h
 )
 
 target_link_libraries(smart_irrigation_system
@@ -33,4 +34,6 @@ target_link_libraries(smart_irrigation_system
         Qt6::Gui
         Qt6::Widgets
         Qt6::Charts
+        paho-mqtt3a
+        pthread
 )

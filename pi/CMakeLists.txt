@@ -49,6 +49,8 @@ add_library(irrigation_lib
     src/state_machine.cpp
     src/irrigation_logic.cpp
     src/mqtt_handler.cpp
+    src/simulated_hardware.cpp
+    src/real_hardware.cpp
 )
 
 target_include_directories(irrigation_lib 
@@ -99,6 +101,5 @@ gtest_discover_tests(irrigation_tests)
 # Optional: Main executable (if you have one)
 ###########################################
 
-# Uncomment if you have a main.cpp
-# add_executable(irrigation_system src/main.cpp)
-# target_link_libraries(irrigation_system PRIVATE irrigation_lib)
+add_executable(irrigation_system src/main.cpp)
+target_link_libraries(irrigation_system PRIVATE irrigation_lib)

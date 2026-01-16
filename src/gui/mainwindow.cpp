@@ -28,6 +28,8 @@ MainWindow::MainWindow(AppController *controller, QWidget *parent)
             this, &MainWindow::updateLabels);
     connect(appController, &AppController::rainDetected,
             this, &MainWindow::onRainDetected);
+    connect(appController, &AppController::rainStatusChanged,
+            this, &MainWindow::updateRainStatus);
      
     setWindowTitle("Smart Irrigation System");
     resize(1000, 700);
@@ -50,6 +52,7 @@ void MainWindow::setupUI()
     // Setup individual tabs
     setupMonitoringTab();
     setupControlsTab();
+    setupSettingsTab();
     
     mainLayout->addWidget(tabWidget);
     setCentralWidget(centralWidget);
@@ -235,10 +238,39 @@ void MainWindow::setupControlsTab()
 void MainWindow::setupSettingsTab()
 {
     QWidget* settingsTab = new QWidget(this);
-    QVBoxLayout *monitoringLayout = new QVBoxLayout(settingsTab);
+    QVBoxLayout *layout = new QVBoxLayout(settingsTab);
+    
+    QGroupBox *connGroup = new QGroupBox("MQTT Connection", settingsTab);
+    QFormLayout *formLayout = new QFormLayout(connGroup);
+    
+    ipInput = new QLineEdit("localhost", settingsTab);
+    portInput = new QSpinBox(settingsTab);
+    portInput->setRange(1, 65535);
+    portInput->setValue(1883);
+    
+    connectButton = new QPushButton("Connect", settingsTab);
+    connectButton->setStyleSheet(
+        "QPushButton { background-color: #3498DB; color: white; "
+        "font-weight: bold; padding: 10px; font-size: 14px; }"
+        "QPushButton:hover { background-color: #2980B9; }"
+    );
+    
+    connectionStatusLabel = new QLabel("Status: Disconnected", settingsTab);
+    connectionStatusLabel->setStyleSheet("color: red; font-weight: bold;");
+    
+    connect(connectButton, &QPushButton::clicked, this, &MainWindow::onConnectClicked);
+    
+    formLayout->addRow("Broker IP:", ipInput);
+    formLayout->addRow("Port:", portInput);
+    formLayout->addRow(connectButton);
+    formLayout->addRow(connectionStatusLabel);
+    
+    layout->addWidget(connGroup);
+    layout->addStretch();
 
-    tabWidget->addTab(settingsTab, "Settings");
-
+    tabWidget->addTab(settingsTab, "⚙️ Settings");
+    
+    setupHistoryTab();
 }
 
 void MainWindow::setupHistoryTab()
@@ -319,24 +351,27 @@ void MainWindow::onRainDetected()
     rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #3498DB; padding: 5px; }");
 }
 
+void MainWindow::updateRainStatus(bool isRaining)
+{
+    if (isRaining) {
+        rainStatusLabel->setText("Rain Status: 🌧️ RAINING (Remote)");
+        rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #3498DB; padding: 5px; }");
+    } else {
+        rainStatusLabel->setText("Rain Status: No Rain");
+        rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #666; padding: 5px; }");
+    }
+}
+
 void MainWindow::onSimulateRainClicked()
 {
-    int duration = rainDurationSpinBox->value();
-    double intensity = rainIntensitySpinBox->value();
+    // Local simulation disabled. 
+    // In future, this could send a "SIMULATE_RAIN" command to the Pi if supported.
+    rainStatusLabel->setText("Rain Sim: Not Available (Remote Mode)");
+    rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #E67E22; padding: 5px; }");
     
-    if (appController && appController->getSimulator()) {
-        appController->getSimulator()->deduceRain(duration, intensity);
-        
-        rainStatusLabel->setText(QString("Rain Status: 🌧️ RAINING (%1s, %2 mm/h)")
-                                .arg(duration)
-                                .arg(intensity, 0, 'f', 1));
-        rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #3498DB; padding: 5px; }");
-        
-        QTimer::singleShot(duration * 1000, this, [this]() {
-            rainStatusLabel->setText("Rain Status: No Rain");
-            rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #666; padding: 5px; }");
-        });
-    }
+    QTimer::singleShot(2000, this, [this]() {
+        updateRainStatus(false); // Reset to current known state
+    });
 }
 
 void MainWindow::onPumpStartClicked()
@@ -349,8 +384,8 @@ void MainWindow::onPumpStartClicked()
     pumpOnButton->setEnabled(false);
     pumpOffButton->setEnabled(true);
     
-    if (appController && appController->getSimulator()) {
-        appController->getSimulator()->setPumpRunning(true);
+    if (appController) {
+        appController->sendCommand("MANUAL_ON");
     }
 }
 
@@ -364,7 +399,19 @@ void MainWindow::onPumpStopClicked()
     pumpOnButton->setEnabled(true);
     pumpOffButton->setEnabled(false);
     
-    if (appController && appController->getSimulator()) {
-        appController->getSimulator()->setPumpRunning(false);
+    if (appController) {
+        appController->sendCommand("MANUAL_OFF");
     }
+}
+
+void MainWindow::onConnectClicked()
+{
+    QString ip = ipInput->text();
+    int port = portInput->value();
+    
+    appController->connectToPi(ip, port);
+    
+    // Optimistic UI update
+    connectionStatusLabel->setText("Status: Connecting...");
+    connectionStatusLabel->setStyleSheet("color: orange; font-weight: bold;");
 }

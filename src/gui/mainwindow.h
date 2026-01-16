@@ -10,9 +10,11 @@
 #include <QWidget>
 #include <QLabel>
 #include <QPushButton>
+#include <QLineEdit>
 #include <QSpinBox>
 #include <QDoubleSpinBox>
 #include <QTabWidget>
+#include <QTimer> // Added for QTimer::singleShot
 
 class AppController;
 
@@ -27,10 +29,12 @@ public:
 private slots:
     void updateMoistureChart(double value);
     void updateLabels();
+    void updateRainStatus(bool isRaining);
     void onRainDetected();
     void onSimulateRainClicked();
     void onPumpStartClicked();
     void onPumpStopClicked();
+    void onConnectClicked();
 
 private:
     void setupUI();
@@ -57,6 +61,12 @@ private:
     QLabel *humidityLabel;
     QLabel *rainStatusLabel;
     QLabel *pumpStatusLabel;
+    
+    // Settings tab widgets
+    QLineEdit *ipInput;
+    QSpinBox *portInput;
+    QPushButton *connectButton;
+    QLabel *connectionStatusLabel;
     
     // Controls tab widgets
     QPushButton *startButton;
