@@ -14,6 +14,7 @@
 #include <QSpinBox>
 #include <QDoubleSpinBox>
 #include <QTabWidget>
+#include <QComboBox> // Added
 #include <QTimer> // Added for QTimer::singleShot
 
 class AppController;
@@ -30,6 +31,9 @@ private slots:
     void updateMoistureChart(double value);
     void updateLabels();
     void updateRainStatus(bool isRaining);
+    void updatePumpStatus(bool isRunning);
+    void onMqttConnected();
+    void onMqttDisconnected();
     void onRainDetected();
     void onSimulateRainClicked();
     void onPumpStartClicked();

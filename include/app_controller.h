@@ -39,7 +39,9 @@ signals:
     void tempUpdated(double value);
     void humidityUpdated(double value);
     void rainDetected(); // Keep for simulation event
-    void rainStatusChanged(bool isRaining); // For state update
+    void rainStatusChanged(bool isRaining);
+    void pumpStatusChanged(bool isRunning);
+ // For state update
 
 private slots:
     void onMoistureUpdate(double value);

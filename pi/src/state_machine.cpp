@@ -71,12 +71,14 @@ void StateMachine::processCommand(Command cmd)
 
         case Command::ENABLE_MANUAL:
             pendingAction = PendingAction::ENTER_MANUAL;
-            spdlog::warn("MANUAL MODE requested - automatic control disabled");
+            pump->activate(); // Activate pump when entering manual mode
+            spdlog::warn("MANUAL MODE requested - automatic control disabled, pump activated");
             break;
 
         case Command::DISABLE_MANUAL:
             pendingAction = PendingAction::EXIT_MANUAL;
-            spdlog::info("→ Exiting MANUAL mode");
+            pump->deactivate(); // Deactivate pump when exiting manual mode
+            spdlog::info("→ Exiting MANUAL mode, pump deactivated");
             break;
 
         case Command::EMERGENCY_STOP:

@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
     }
 
     // Wiring MQTT callbacks to StateMachine
-    mqtt.setCallback([&stateMachine](std::string topic, std::string payload) {
+    mqtt.setCallback([&stateMachine, useSimulator, &hardware](std::string topic, std::string payload) {
         spdlog::info("MQTT Command received: {} -> {}", topic, payload);
         
         if (payload == "START") {
@@ -62,6 +62,21 @@ int main(int argc, char* argv[])
             stateMachine.sendCommnd(Command::ENABLE_MANUAL);
         } else if (payload == "MANUAL_OFF") {
             stateMachine.sendCommnd(Command::DISABLE_MANUAL);
+        } else if (payload == "SCENARIO_DRY") {
+            if (useSimulator) {
+                auto sim = std::static_pointer_cast<SimulatedHardware>(hardware.hardwareInstance);
+                if (sim) sim->setScenario(SimulatedHardware::Scenario::DRY);
+            }
+        } else if (payload == "SCENARIO_WET") {
+            if (useSimulator) {
+                auto sim = std::static_pointer_cast<SimulatedHardware>(hardware.hardwareInstance);
+                if (sim) sim->setScenario(SimulatedHardware::Scenario::WET);
+            }
+        } else if (payload == "SCENARIO_NORMAL") {
+            if (useSimulator) {
+                auto sim = std::static_pointer_cast<SimulatedHardware>(hardware.hardwareInstance);
+                if (sim) sim->setScenario(SimulatedHardware::Scenario::NORMAL);
+            }
         }
     });
 

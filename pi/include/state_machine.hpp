@@ -42,8 +42,8 @@ struct IrrigationConfig {
     double lowMoistureThreshold = 30.0;
     double highMoistureThreshold = 60.0;
     int maxWateringSeconds = 60;
-    int waitMinutes = 15;
-    int minWateringIntervalMinutes = 30;
+    int waitMinutes = 1; // Reduced for testing (was 15)
+    int minWateringIntervalMinutes = 1; // Reduced for testing (was 30)
 
     //presests:-
     static IrrigationConfig forClay(const std::string& name) {

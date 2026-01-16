@@ -120,6 +120,7 @@ void MqttClientQt::onSubscribeSuccess(void* context, MQTTAsync_successData* resp
     // Hack: Paho subscribe response doesn't give topic back directly.
     // We'll just emit empty or modify signal later. Or pass topic in custom context struct.
     emit self->subscribed("topic_confirmed");
+    qDebug() << "DEBUG: [MqttClientQt] Subscription successful!";
 }
 
 void MqttClientQt::onPublishSuccess(void* context, MQTTAsync_successData* response) {
@@ -133,9 +134,17 @@ void MqttClientQt::onPublishSuccess(void* context, MQTTAsync_successData* respon
 
 int MqttClientQt::onMessageArrived(void* context, char* topicName, int topicLen, MQTTAsync_message* message) {
     MqttClientQt* self = static_cast<MqttClientQt*>(context);
-    QString topic = QString::fromUtf8(topicName, topicLen);
+    
+    QString topic;
+    if (topicLen == 0) {
+        topic = QString::fromUtf8(topicName);
+    } else {
+        topic = QString::fromUtf8(topicName, topicLen);
+    }
     QString payload = QString::fromUtf8((char*)message->payload, message->payloadlen);
     
+    qDebug() << "DEBUG: [MqttClientQt] Raw Paho Callback - Topic:" << topic << "Payload:" << payload;
+
     emit self->messageReceived(topic, payload);
     
     MQTTAsync_freeMessage(&message);

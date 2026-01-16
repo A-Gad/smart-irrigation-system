@@ -27,6 +27,9 @@ public:
     // Simulation control
     void update(); // Call this periodically to advance simulation physics
     void setRain(bool raining, double intensity);
+    
+    enum class Scenario { DRY, WET, NORMAL };
+    void setScenario(Scenario scenario);
 
 private:
     // Simulation state
@@ -40,6 +43,7 @@ private:
     
     bool pumpRunning;
     bool systemHealthy;
+    bool scenarioActive; // Lock temp/humidity when scenario is applied
 
     // Time tracking
     std::chrono::steady_clock::time_point lastUpdateTime;

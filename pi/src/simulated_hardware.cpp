@@ -2,6 +2,7 @@
 #include <cmath>
 #include <algorithm>
 #include <ctime>
+#include <spdlog/spdlog.h>
 
 SimulatedHardware::SimulatedHardware()
     : moistureLevel(500.0),
@@ -11,7 +12,8 @@ SimulatedHardware::SimulatedHardware()
       isRaining(false),
       rainIntensity(0.0),
       pumpRunning(false),
-      systemHealthy(true)
+      systemHealthy(true),
+      scenarioActive(false)
 {
     std::random_device rd;
     rng = std::default_random_engine(rd());
@@ -80,8 +82,11 @@ void SimulatedHardware::updateSensors(double deltaTime) {
     std::tm* now = std::localtime(&t);
     int hourOfDay = now->tm_hour;
 
-    temperature = calculateTemperature(hourOfDay);
-    humidity = calculateHumidity(hourOfDay);
+    // Only recalculate temp/humidity if no scenario is active
+    if (!scenarioActive) {
+        temperature = calculateTemperature(hourOfDay);
+        humidity = calculateHumidity(hourOfDay);
+    }
 
     // Soil Moisture Physics
 
@@ -106,7 +111,7 @@ void SimulatedHardware::updateSensors(double deltaTime) {
 
     if (pumpRunning) {
         double absorptionRate = 1.0 - std::pow(actualSaturation, 2.0);
-        waterInput += 25.0 * absorptionRate * deltaTime; // Increased pump rate for faster feedback
+        waterInput += 150.0 * absorptionRate * deltaTime; // Boosted pump rate (was 25.0)
     }
 
     if (isRaining) {
@@ -127,6 +132,19 @@ void SimulatedHardware::updateSensors(double deltaTime) {
 
     moistureLevel += alpha * (actualMoistureLevel - moistureLevel) + noise;
     moistureLevel = std::clamp(moistureLevel, MIN_MOISTURE, MAX_MOISTURE);
+
+    static int logCounter = 0;
+    if (++logCounter >= 200) { // Log every ~20 seconds (assuming 100ms update rate, wait, main loop is 100ms? update() called every loop? yes. so 10 calls/sec. 200 calls = 20s. Maybe too slow? let's do 20 calls = 2s)
+       // Update: use time-based logging
+    }
+    
+    // Better: use static timer
+    static auto lastLog = std::chrono::steady_clock::now();
+    if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - lastLog).count() >= 1) {
+        spdlog::info("PHYSICS: Moisture={:.1f} (Target={:.1f}), Pump={}, Rain={}, Input={:.2f}, Evap={:.2f}, dT={:.3f}",
+            moistureLevel, actualMoistureLevel, pumpRunning, isRaining, waterInput, evaporation, deltaTime);
+        lastLog = std::chrono::steady_clock::now();
+    }
 }
 
 double SimulatedHardware::calculateTemperature(int hourOfDay) {
@@ -142,4 +160,38 @@ double SimulatedHardware::calculateHumidity(int hourOfDay) {
     // Inverse to temp, min at 3 PM
     double hum = baseHumidity + amplitude * std::cos(((hourOfDay - 6) / 12.0) * M_PI);
     return std::clamp(hum, 0.0, 100.0);
+}
+
+void SimulatedHardware::setScenario(Scenario scenario) {
+    scenarioActive = true; // Lock temp/humidity at scenario values
+    
+    if (scenario == Scenario::DRY) {
+        actualMoistureLevel = 250.0; // Very dry
+        moistureLevel = 250.0;
+        temperature = 35.0; // Hot
+        humidity = 20.0;
+        isRaining = false;
+    } else if (scenario == Scenario::WET) {
+        actualMoistureLevel = 750.0; // Wet
+        moistureLevel = 750.0;
+        temperature = 18.0; // Cool
+        humidity = 80.0;
+        isRaining = true; // Rain
+    } else { // NORMAL
+        scenarioActive = false; // Release lock for NORMAL
+        actualMoistureLevel = 500.0;
+        moistureLevel = 500.0;
+        temperature = 25.0;
+        humidity = 50.0;
+        isRaining = false;
+        spdlog::info("SCENARIO: NORMAL APPLIED"); 
+    }
+    
+    if (scenario == Scenario::DRY) spdlog::info("SCENARIO: DRY APPLIED");
+    if (scenario == Scenario::WET) spdlog::info("SCENARIO: WET APPLIED");
+
+    // Reset lastUpdateTime to prevent huge time jump if system was idle? 
+    // Actually, update() handles dT based on wall clock. If we warp values, we don't change time.
+    // But let's log the post-set values.
+    spdlog::info("SCENARIO RESULT: Moisture set to {}, Scenario Lock: {}", moistureLevel, scenarioActive);
 }

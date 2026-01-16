@@ -30,6 +30,14 @@ MainWindow::MainWindow(AppController *controller, QWidget *parent)
             this, &MainWindow::onRainDetected);
     connect(appController, &AppController::rainStatusChanged,
             this, &MainWindow::updateRainStatus);
+    connect(appController, &AppController::pumpStatusChanged,
+            this, &MainWindow::updatePumpStatus);
+            
+    // Connect MQTT connection signals
+    connect(appController->getMqttClient(), &MqttClientQt::connected,
+            this, &MainWindow::onMqttConnected);
+    connect(appController->getMqttClient(), &MqttClientQt::disconnected,
+            this, &MainWindow::onMqttDisconnected);
      
     setWindowTitle("Smart Irrigation System");
     resize(1000, 700);
@@ -226,8 +234,32 @@ void MainWindow::setupControlsTab()
     rainMainLayout->addWidget(rainDescription);
     rainMainLayout->addLayout(rainLayout);
     
+    // Scenario controls group
+    QGroupBox *scenarioGroup = new QGroupBox("🧪 Test Scenarios", controlsTab);
+    QHBoxLayout *scenarioLayout = new QHBoxLayout(scenarioGroup);
+    
+    QComboBox *scenarioCombo = new QComboBox(controlsTab);
+    scenarioCombo->addItem("Normal Conditions", "SCENARIO_NORMAL");
+    scenarioCombo->addItem("Force Dry (Low Moisture, Hot)", "SCENARIO_DRY");
+    scenarioCombo->addItem("Force Wet (High Moisture, Rain)", "SCENARIO_WET");
+    
+    QPushButton *applyScenarioBtn = new QPushButton("Apply", controlsTab);
+    applyScenarioBtn->setStyleSheet("QPushButton { font-weight: bold; padding: 5px; }");
+    
+    connect(applyScenarioBtn, &QPushButton::clicked, [this, scenarioCombo]() {
+        if (appController) {
+            QString cmd = scenarioCombo->currentData().toString();
+            appController->sendCommand(cmd);
+        }
+    });
+
+    scenarioLayout->addWidget(new QLabel("Select Scenario:"));
+    scenarioLayout->addWidget(scenarioCombo);
+    scenarioLayout->addWidget(applyScenarioBtn);
+
     // Add all groups to controls layout
     controlsLayout->addWidget(controlGroup);
+    controlsLayout->addWidget(scenarioGroup); // Added
     controlsLayout->addWidget(pumpControl);
     controlsLayout->addWidget(rainGroup);
     controlsLayout->addStretch();  // Push everything to top
@@ -243,7 +275,7 @@ void MainWindow::setupSettingsTab()
     QGroupBox *connGroup = new QGroupBox("MQTT Connection", settingsTab);
     QFormLayout *formLayout = new QFormLayout(connGroup);
     
-    ipInput = new QLineEdit("localhost", settingsTab);
+    ipInput = new QLineEdit("192.168.1.21", settingsTab); // Changed default to Pi IP
     portInput = new QSpinBox(settingsTab);
     portInput->setRange(1, 65535);
     portInput->setValue(1883);
@@ -300,7 +332,7 @@ void MainWindow::setupChart()
     
     axisY = new QValueAxis();
     axisY->setTitleText("Moisture Level");
-    axisY->setRange(200, 800);
+    axisY->setRange(0, 100);
     
     chart->addAxis(axisX, Qt::AlignBottom);
     chart->addAxis(axisY, Qt::AlignLeft);
@@ -354,11 +386,18 @@ void MainWindow::onRainDetected()
 void MainWindow::updateRainStatus(bool isRaining)
 {
     if (isRaining) {
-        rainStatusLabel->setText("Rain Status: 🌧️ RAINING (Remote)");
-        rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #3498DB; padding: 5px; }");
+        rainStatusLabel->setText("🌧️ Rain Status: <span style='color: #2196F3; font-weight: bold;'>Raining</span>");
     } else {
-        rainStatusLabel->setText("Rain Status: No Rain");
-        rainStatusLabel->setStyleSheet("QLabel { font-weight: bold; font-size: 14px; color: #666; padding: 5px; }");
+        rainStatusLabel->setText("🌧️ Rain Status: No Rain");
+    }
+}
+
+void MainWindow::updatePumpStatus(bool isRunning)
+{
+    if (isRunning) {
+        pumpStatusLabel->setText("<span style='color: #4CAF50; font-weight: bold;'>Pump: ON</span>");
+    } else {
+        pumpStatusLabel->setText("<span style='color: #F44336;'>Pump: OFF</span>");
     }
 }
 
@@ -406,6 +445,13 @@ void MainWindow::onPumpStopClicked()
 
 void MainWindow::onConnectClicked()
 {
+    if (connectButton->text() == "Disconnect") {
+        if (appController->getMqttClient()) {
+            appController->getMqttClient()->disconnectFromHost();
+        }
+        return;
+    }
+
     QString ip = ipInput->text();
     int port = portInput->value();
     
@@ -414,4 +460,23 @@ void MainWindow::onConnectClicked()
     // Optimistic UI update
     connectionStatusLabel->setText("Status: Connecting...");
     connectionStatusLabel->setStyleSheet("color: orange; font-weight: bold;");
+    connectButton->setEnabled(false); // Prevent double clicking
+}
+
+void MainWindow::onMqttConnected()
+{
+    connectionStatusLabel->setText("Status: Connected");
+    connectionStatusLabel->setStyleSheet("color: green; font-weight: bold;");
+    connectButton->setText("Disconnect");
+    connectButton->setStyleSheet("QPushButton { background-color: #E67E22; color: white; font-weight: bold; padding: 10px; }");
+    connectButton->setEnabled(true);
+}
+
+void MainWindow::onMqttDisconnected()
+{
+    connectionStatusLabel->setText("Status: Disconnected");
+    connectionStatusLabel->setStyleSheet("color: red; font-weight: bold;");
+    connectButton->setText("Connect");
+    connectButton->setStyleSheet("QPushButton { background-color: #3498DB; color: white; font-weight: bold; padding: 10px; }");
+    connectButton->setEnabled(true); 
 }

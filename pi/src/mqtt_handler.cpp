@@ -70,8 +70,8 @@ void MqttHandler::setCallback(MessageCallback callback) {
 void MqttHandler::onConnect(void* context, MQTTAsync_successData* response) {
     
     MqttHandler* handler = static_cast<MqttHandler*>(context);
-    handler->subscribe("smart-irrigation-system");
-    spdlog::info("MQTT subscribed successfully!");
+    handler->subscribe("irrigation/command");
+    spdlog::info("MQTT subscribed successfully to irrigation/command!");
 }
 
 void MqttHandler::onConnectFailure(void* context, MQTTAsync_failureData* response) 
@@ -105,6 +105,6 @@ void MqttHandler::onConnectionLost(void* context, char* cause)
 void MqttHandler::onReconnected(void* context, char* cause)
 {
     MqttHandler* handler = static_cast<MqttHandler*>(context);
-    handler->subscribe("smart-irrigation-system");
+    handler->subscribe("irrigation/command");
     spdlog::info("MQTT reconnected and subscribed successfully!");
 }

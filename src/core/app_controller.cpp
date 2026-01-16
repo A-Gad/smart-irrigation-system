@@ -74,6 +74,7 @@ void AppController::onRainDetected()
 
 void AppController::onMqttMessageReceived(const QString &topic, const QString &payload)
 {
+    qDebug() << "DEBUG: [AppController] Received Topic:" << topic << " Payload:" << payload;
     if (topic == "irrigation/status") {
         QJsonDocument doc = QJsonDocument::fromJson(payload.toUtf8());
         if (doc.isObject()) {
@@ -84,6 +85,7 @@ void AppController::onMqttMessageReceived(const QString &topic, const QString &p
             if (obj.contains("t")) onTempUpdate(obj["t"].toDouble());
             if (obj.contains("h")) onHumidityUpdate(obj["h"].toDouble());
             if (obj.contains("r")) emit rainStatusChanged(obj["r"].toInt() == 1);
+            if (obj.contains("p")) emit pumpStatusChanged(obj["p"].toInt() == 1);
             
             // Log full status for debug
             qDebug() << "MQTT Status - State:" << obj["s"].toInt() 
@@ -97,8 +99,16 @@ void AppController::onMqttMessageReceived(const QString &topic, const QString &p
 void AppController::connectToPi(const QString& ip, int port)
 {
     if (mqtt) {
+        // Connect message received signal
         connect(mqtt, &MqttClientQt::messageReceived, 
                 this, &AppController::onMqttMessageReceived);
+        
+        // Subscribe when connected
+        connect(mqtt, &MqttClientQt::connected, this, [this]() {
+            qDebug() << "Connected! Subscribing to irrigation/status...";
+            mqtt->subscribe("irrigation/status");
+        });
+
         mqtt->connectToHost(ip, port);
     }
 }

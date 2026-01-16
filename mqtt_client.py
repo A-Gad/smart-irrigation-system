@@ -5,7 +5,7 @@ import threading
 import sys
 
 # Broker Configuration
-BROKER_ADDRESS = "localhost"
+BROKER_ADDRESS = "192.168.1.21"
 PORT = 1883
 TOPIC_SUB = "irrigation/#"
 TOPIC_PUB = "irrigation/command"
