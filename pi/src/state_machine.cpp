@@ -78,7 +78,7 @@ void StateMachine::processCommand(Command cmd)
         case Command::DISABLE_MANUAL:
             pendingAction = PendingAction::EXIT_MANUAL;
             pump->deactivate(); // Deactivate pump when exiting manual mode
-            spdlog::info("→ Exiting MANUAL mode, pump deactivated");
+            spdlog::info("Exiting MANUAL mode, pump deactivated");
             break;
 
         case Command::EMERGENCY_STOP:
@@ -163,7 +163,7 @@ void StateMachine::update()
         auto now = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - stateEntryTime);
         
-        spdlog::info("STATE CHANGE: {} → {} (after {}s)", 
+        spdlog::info("STATE CHANGE: {} to {} (after {}s)", 
                     stateToString(currentState), 
                     stateToString(nextState),
                     duration.count());
@@ -226,7 +226,7 @@ SystemState StateMachine::IdleState()
     );
     
     if (idleDuration.count() % 300 == 0 && idleDuration.count() > 0) {
-        spdlog::info("IDLE status check - Moisture: {}%, Temp: {}°C, Humidity: {}%, Rain: {}", 
+        spdlog::info("IDLE status check - Moisture: {}%, Temp: {} C, Humidity: {}%, Rain: {}", 
                      moisture, temp, humid, isRaining ? "YES" : "NO");
     }
     
@@ -256,7 +256,6 @@ SystemState StateMachine::IdleState()
 }
 SystemState StateMachine::MonitoringState()
 {
-    //add sensor reading
     double moisture = sensor->getMoisture();
     addSensorReading(moisture);
     //get filtered moisture from irrigation logic
@@ -315,8 +314,6 @@ SystemState StateMachine::MonitoringState()
 }
 SystemState StateMachine::WateringState()
 {
-   
-    //start pump
     if (!pump->isActive())
     {
         pump->activate();

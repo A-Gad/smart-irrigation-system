@@ -66,21 +66,18 @@ bool IrrigarionLogic::shouldStopWatering(
         int maxWateringSeconds,
         std::optional<double> moistureChangeRate)
 {
-    // Success: Target reached
     if (filteredMoisture >= targetMoisture) {
         return true;
     }
         
-    // Timeout: Max time exceeded
     if (wateringDuration.count() >= maxWateringSeconds) {
         return true;
     }
         
-    // Problem: Moisture not increasing
     if (moistureChangeRate.has_value() &&
         wateringDuration.count() > 10 &&
         moistureChangeRate.value() < 0.5) {
-        return true;  // Pump failure?
+        return true;
     }
         
     return false;

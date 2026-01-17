@@ -86,9 +86,6 @@ int main(int argc, char* argv[])
     auto lastPublishTime = std::chrono::steady_clock::now();
 
     while (true) {
-        // A. Update Simulation (if using simulator)
-        // We need to cast back to SimulatedHardware to access the update() method
-        // because it's not part of the standard hardware interfaces.
         if (useSimulator) {
             auto sim = std::static_pointer_cast<SimulatedHardware>(hardware.hardwareInstance);
             if (sim) {
@@ -96,15 +93,12 @@ int main(int argc, char* argv[])
             }
         }
 
-        // B. Update State Machine
         stateMachine.update();
 
-        // C. Publish Status (every 5 seconds)
+        // Publish Status (every 5 seconds)
         auto now = std::chrono::steady_clock::now();
         if (std::chrono::duration_cast<std::chrono::seconds>(now - lastPublishTime).count() >= 5) {
             
-            // Construct compact JSON status
-            // s: state (int), m: moisture, t: temp, h: humidity, p: pump (int)
             std::string status = "{";
             status += "\"s\":" + std::to_string(static_cast<int>(stateMachine.getCurrentState())) + ",";
             status += "\"m\":" + std::to_string(hardware.sensor->getMoisture()) + ",";

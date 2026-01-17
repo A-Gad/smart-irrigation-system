@@ -12,22 +12,22 @@ TOPIC_PUB = "irrigation/command"
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print(f"✅ Connected to MQTT Broker at {BROKER_ADDRESS}")
+        print(f"Connected to MQTT Broker at {BROKER_ADDRESS}")
         client.subscribe(TOPIC_SUB)
-        print(f"📡 Subscribed to topic: {TOPIC_SUB}")
+        print(f"Subscribed to topic: {TOPIC_SUB}")
     else:
         print(f"❌ Failed to connect, return code {rc}")
 
 def on_message(client, userdata, msg):
     try:
         payload = msg.payload.decode()
-        print(f"\n📩 Received [{msg.topic}]: {payload}")
-        print("> ", end="", flush=True) # Restore prompt
+        print(f"\nReceived [{msg.topic}]: {payload}")
+        print("> ", end="", flush=True)
     except Exception as e:
         print(f"\nError decoding message: {e}")
 
 def input_loop(client):
-    print("\n⌨️  Enter commands to publish to 'irrigation/command' (or 'q' to quit):")
+    print("\nEnter commands to publish to 'irrigation/command' (or 'q' to quit):")
     time.sleep(1) 
     print("> ", end="", flush=True)
     while True:
@@ -39,7 +39,7 @@ def input_loop(client):
                 break
             if cmd:
                 client.publish(TOPIC_PUB, cmd)
-                print(f"📤 Sent: {cmd}")
+                print(f"Sent: {cmd}")
                 print("> ", end="", flush=True)
         except EOFError:
             break
@@ -49,11 +49,11 @@ def main():
     client.on_connect = on_connect
     client.on_message = on_message
 
-    print(f"🔄 Connecting to {BROKER_ADDRESS}...")
+    print(f"Connecting to {BROKER_ADDRESS}...")
     try:
         client.connect(BROKER_ADDRESS, PORT, 60)
     except Exception as e:
-        print(f"❌ Connection failed: {e}")
+        print(f"Connection failed: {e}")
         return
 
     # Start the network loop in a background thread

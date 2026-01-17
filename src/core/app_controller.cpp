@@ -80,7 +80,6 @@ void AppController::onMqttMessageReceived(const QString &topic, const QString &p
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
             
-            // s: state, m: moisture, t: temp, h: humidity, p: pump, r: rain
             if (obj.contains("m")) onMoistureUpdate(obj["m"].toDouble());
             if (obj.contains("t")) onTempUpdate(obj["t"].toDouble());
             if (obj.contains("h")) onHumidityUpdate(obj["h"].toDouble());
