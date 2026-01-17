@@ -1,5 +1,5 @@
 # Smart Irrigation System
-
+(ongoing project)
 A robust, multi-component smart irrigation system designed for Raspberry Pi. The system uses a state-machine based firmware to monitor soil moisture and control irrigation, coupled with a Qt-based GUI for remote monitoring and control over MQTT.
 
 ## System Architecture
@@ -76,3 +76,13 @@ The Pi firmware includes unit and integration tests using GoogleTest.
 cd pi/build
 ./irrigation_tests
 ```
+
+## Screen shots
+<img width="2560" height="1344" alt="image" src="https://github.com/user-attachments/assets/b2d38c76-2a23-43bc-922a-8245690817d2" />
+
+<img width="2560" height="1344" alt="image" src="https://github.com/user-attachments/assets/74df9915-a6f7-48ca-a260-0330b7e95070" />
+
+<img width="2012" height="1314" alt="image" src="https://github.com/user-attachments/assets/d7e35e92-4140-423a-9d46-10f229729d61" />
+
+
+
