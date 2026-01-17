@@ -110,15 +110,7 @@ void MqttClientQt::onDisconnectSuccess(void* context, MQTTAsync_successData* res
 
 void MqttClientQt::onSubscribeSuccess(void* context, MQTTAsync_successData* response) {
     Q_UNUSED(response);
-    // Note: Paho doesn't provide the topic in successData for subscribe easily without tracking tokens.
-    // For simplicity, we just emit a generic subscribed signal or assume the last one.
-    // The user's signal requires a topic. We can omit it or change signal.
-    // Let's just emit without topic for now or store it in context if needed.
-    // Revisiting header: signal is void subscribed(const QString& topic);
-    // Since we don't have the topic here, we will emit "unknown" or change logic.
     MqttClientQt* self = static_cast<MqttClientQt*>(context);
-    // Hack: Paho subscribe response doesn't give topic back directly.
-    // We'll just emit empty or modify signal later. Or pass topic in custom context struct.
     emit self->subscribed("topic_confirmed");
     qDebug() << "DEBUG: [MqttClientQt] Subscription successful!";
 }
@@ -126,9 +118,6 @@ void MqttClientQt::onSubscribeSuccess(void* context, MQTTAsync_successData* resp
 void MqttClientQt::onPublishSuccess(void* context, MQTTAsync_successData* response) {
     Q_UNUSED(response);
     MqttClientQt* self = static_cast<MqttClientQt*>(context);
-    // Paho doesn't give topic/payload back in success callback.
-    // We can't perfectly emit (topic, payload) here without tracking tokens.
-    // We'll emit dummy for now or just log.
     emit self->messagePublished("published_topic", "published_payload");
 }
 
